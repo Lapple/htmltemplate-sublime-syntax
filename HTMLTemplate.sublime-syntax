@@ -15,8 +15,8 @@ contexts:
     - include: tmpl_tag
 
   main:
-    - match: ""
-      push: "Packages/HTML/HTML.sublime-syntax"
+    - match: ''
+      push: Packages/HTML/HTML.sublime-syntax
       with_prototype:
         - include: prototype
 
@@ -25,13 +25,18 @@ contexts:
     - match: (<){{whitespace_control_begin}}*(/?)\s*((?i:TMPL)_[a-zA-Z0-9_]+\b)
       captures:
         1: punctuation.definition.tag.begin.tmpl
+        ## TODO: Adjust color for whitespace control.
         2: variable.language.whitespace-control.begin.tmpl
         3: punctuation.definition.tag.begin.tmpl
-        4: punctuation.definition.entity.any.tmpl
+        4: keyword.control.tmpl, punctuation.definition.entity.tmpl
       push:
         - meta_scope: meta.tag.other.tmpl
 
         # Termination
+        - match: '{{whitespace_control_end}}'
+          captures:
+            ## TODO: Adjust color for whitespace control.
+            0: variable.language.whitespace-control.tag.end.tmpl
         - match: '/>'
           captures:
             0: invalid.illegal.tag.eng.tmpl
@@ -40,14 +45,12 @@ contexts:
           captures:
             0: punctuation.definition.tag.end.tmpl
           pop: true
-        - match: '{{whitespace_control_end}}'
-          captures:
-            0: variable.language.whitespace-control.tag.end.tmpl
 
         # Attributes
         - include: tmpl_tag_attribute_name
         - include: tmpl_tag_attribute_value
         - include: tmpl_tag_attribute_code
+        - include: tmpl_tag_attribute_interpolation
 
   tmpl_tag_attribute_name:
     - match: '(?<=[^=])\b([a-zA-Z0-9_-]+)\s*(=?)'
@@ -70,6 +73,17 @@ contexts:
             1: support.function.code.end.tmpl
           pop: true
 
+  tmpl_tag_attribute_interpolation:
+    - match: (\{)\s*
+      captures:
+        1: meta.brace.curly.tmpl
+      push: Packages/Perl/Perl.sublime-syntax
+      with_prototype:
+        - match: \s*(\})
+          captures:
+            1: meta.brace.curly.tmpl
+          pop: true
+
   # Comments
   multi_line_comment:
     - meta_include_prototype: false
@@ -88,7 +102,6 @@ contexts:
         pop: true
 
   # Utility tokens
-
   string_literal:
     - match: "'"
       captures:
