@@ -1,0 +1,117 @@
+%YAML 1.2
+---
+name: HTML::Template
+file_extensions: [inc, tmpl]
+scope: source.tmpl
+
+variables:
+  whitespace_control_begin: (-|~[\.\|]?)
+  whitespace_control_end: (-|[\.\|]?~)
+
+contexts:
+  prototype:
+    - include: single_line_comment
+    - include: multi_line_comment
+    - include: tmpl_tag
+
+  main:
+    - match: ""
+      push: "Packages/HTML/HTML.sublime-syntax"
+      with_prototype:
+        - include: prototype
+
+  # TMPL tags
+  tmpl_tag:
+    - match: (<){{whitespace_control_begin}}*(/?)\s*((?i:TMPL)_[a-zA-Z0-9_]+\b)
+      captures:
+        1: punctuation.definition.tag.begin.tmpl
+        2: variable.language.whitespace-control.begin.tmpl
+        3: punctuation.definition.tag.begin.tmpl
+        4: punctuation.definition.entity.any.tmpl
+      push:
+        - meta_scope: meta.tag.other.tmpl
+
+        # Termination
+        - match: '/>'
+          captures:
+            0: invalid.illegal.tag.eng.tmpl
+          pop: true
+        - match: '>'
+          captures:
+            0: punctuation.definition.tag.end.tmpl
+          pop: true
+        - match: '{{whitespace_control_end}}'
+          captures:
+            0: variable.language.whitespace-control.tag.end.tmpl
+
+        # Attributes
+        - include: tmpl_tag_attribute_name
+        - include: tmpl_tag_attribute_value
+        - include: tmpl_tag_attribute_code
+
+  tmpl_tag_attribute_name:
+    - match: '(?<=[^=])\b([a-zA-Z0-9_-]+)\s*(=?)'
+      captures:
+        # TODO: Decide about highlighting this
+        1: support.function.attribute.tmpl
+        2: punctuation.separator.key-value.tmpl
+
+  tmpl_tag_attribute_value:
+    - include: string_literal
+
+  tmpl_tag_attribute_code:
+    - match: (\[%)\s*
+      captures:
+        1: support.function.code.begin.tmpl
+      push: Packages/Perl/Perl.sublime-syntax
+      with_prototype:
+        - match: \s*(%\])
+          captures:
+            1: support.function.code.end.tmpl
+          pop: true
+
+  # Comments
+  multi_line_comment:
+    - meta_include_prototype: false
+    - match: '<TMPL_COMMENT>'
+      push:
+      - meta_scope: comment.block.tmpl
+      - match: '</TMPL_COMMENT>'
+        pop: true
+
+  single_line_comment:
+    - meta_include_prototype: false
+    - match: (\A#|##)
+      push:
+      - meta_scope: comment.line.tmpl
+      - match: \n
+        pop: true
+
+  # Utility tokens
+
+  string_literal:
+    - match: "'"
+      captures:
+        0: punctuation.definition.string.begin.tmpl
+      push:
+        - meta_scope: string.quoted.single.tmpl
+        - match: "'"
+          captures:
+            0: punctuation.definition.string.end.tmpl
+          pop: true
+        - include: string_escape_character
+
+    - match: '"'
+      captures:
+        0: punctuation.definition.string.begin.tmpl
+      push:
+        - meta_scope: string.quoted.double.tmpl
+        - match: '"'
+          captures:
+            0: punctuation.definition.string.end.tmpl
+          pop: true
+        - include: string_escape_character
+
+  string_escape_character:
+    - match: '\\(x[\da-fA-F]{2}|u[\da-fA-F]{4}|.)'
+      scope: constant.character.escape.tmpl
